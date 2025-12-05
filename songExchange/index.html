@@ -160,9 +160,11 @@
    <div class="header"><span class="emoji">🎵</span>
     <h1 id="pageTitle">填一首你推薦的歌與歌庫交換</h1>
    </div>
-   <div class="form-group"><label for="songNameInput" id="songLabel">歌名：</label> <input id="songNameInput" type="text" placeholder="輸入歌名">
+   <div class="form-group"><label for="songNameInput" id="songLabel">歌名���</label> <input id="songNameInput" type="text" placeholder="輸入歌名">
    </div>
    <div class="form-group"><label for="artistInput" id="artistLabel">歌手：</label> <input id="artistInput" type="text" placeholder="輸入歌手">
+   </div>
+   <div class="form-group"><label for="youtubeInput" id="youtubeLabel">YouTube網址（選填）：</label> <input id="youtubeInput" type="url" placeholder="https://www.youtube.com/watch?v=...">
    </div><button class="submit-btn" id="submitBtn" onclick="submitSong()">提交</button>
    <div id="status"></div>
   </div>
@@ -171,6 +173,7 @@
     page_title: "填一首你推薦的歌與歌庫交換🎵",
     song_label: "歌名：",
     artist_label: "歌手：",
+    youtube_label: "YouTube網址（選填）：",
     button_text: "提交",
     background_color: "#667eea",
     surface_color: "#ffffff",
@@ -183,6 +186,7 @@
     const pageTitle = config.page_title || defaultConfig.page_title;
     const songLabel = config.song_label || defaultConfig.song_label;
     const artistLabel = config.artist_label || defaultConfig.artist_label;
+    const youtubeLabel = config.youtube_label || defaultConfig.youtube_label;
     const buttonText = config.button_text || defaultConfig.button_text;
     const backgroundColor = config.background_color || defaultConfig.background_color;
     const surfaceColor = config.surface_color || defaultConfig.surface_color;
@@ -193,6 +197,7 @@
     document.getElementById('pageTitle').textContent = pageTitle;
     document.getElementById('songLabel').textContent = songLabel;
     document.getElementById('artistLabel').textContent = artistLabel;
+    document.getElementById('youtubeLabel').textContent = youtubeLabel;
     document.getElementById('submitBtn').textContent = buttonText;
 
     document.body.style.background = `linear-gradient(135deg, ${primaryActionColor} 0%, ${secondaryActionColor} 100%)`;
@@ -254,6 +259,7 @@
         ["page_title", config.page_title || defaultConfig.page_title],
         ["song_label", config.song_label || defaultConfig.song_label],
         ["artist_label", config.artist_label || defaultConfig.artist_label],
+        ["youtube_label", config.youtube_label || defaultConfig.youtube_label],
         ["button_text", config.button_text || defaultConfig.button_text]
       ])
     });
@@ -274,6 +280,7 @@
   async function submitSong() {
     const songName = document.getElementById("songNameInput").value.trim();
     const artist = document.getElementById("artistInput").value.trim();
+    const youtubeUrl = document.getElementById("youtubeInput").value.trim();
 
     if (!songName || !artist) {
       showStatus("請填寫完整的歌名與歌手！", "error");
@@ -307,7 +314,8 @@
       await songListRef.doc(docId).set({
         songId: newIdNumber,
         songname: songName,
-        artist: artist
+        artist: artist,
+        YT: youtubeUrl || ""
       });
 
       let randomSong = null;
@@ -316,11 +324,13 @@
       }
 
       if (randomSong) {
-        showStatus(
-          `🎉 謝謝！你的推薦已加入歌單！<br>` +
-          `你抽到的推薦歌曲是：<b>${randomSong.songname} - ${randomSong.artist}</b>`,
-          "success"
-        );
+        let message = `🎉 謝謝！你的推薦已加入歌單！<br>你抽到的推薦歌曲是：<b>${randomSong.songname} - ${randomSong.artist}</b>`;
+        
+        if (randomSong.YT && randomSong.YT !== "") {
+          message += `<br><a href="${randomSong.YT}" target="_blank" rel="noopener noreferrer" style="color: #4299e1; text-decoration: underline; font-weight: 600;">🎬 點此觀看 YouTube</a>`;
+        }
+        
+        showStatus(message, "success");
       } else {
         showStatus(
           `🎉 謝謝！你的推薦已加入歌單！<br>目前歌單還沒有其他歌曲可以抽！`,
@@ -330,6 +340,7 @@
 
       document.getElementById("songNameInput").value = "";
       document.getElementById("artistInput").value = "";
+      document.getElementById("youtubeInput").value = "";
 
     } catch (err) {
       console.error(err);
@@ -346,5 +357,5 @@
 
   onConfigChange(window.elementSdk ? window.elementSdk.config : defaultConfig);
 </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a90c005a62aa9c2',t:'MTc2NDkwODQxNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a90c875a405a9c2',t:'MTc2NDkwODc2Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
