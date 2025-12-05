@@ -53,7 +53,7 @@
 
 <body>
 
-  <h2>🎵 填一首你推薦的歌</h2>
+  <h2>填一首你推薦的歌，交換歌庫裡的一首歌🎵 </h2>
 
   <label>歌名：</label>
   <input id="songNameInput" type="text" placeholder="輸入歌名">
@@ -71,9 +71,9 @@
     ---------------------------- */
     const firebaseConfig = {
       apiKey: "AIzaSyDl7MRgN9kYxJKPgb_3Q8C4HcznFsO-rdI",
-      authDomain: "shuffle-song-suggestions.firebaseapp.com",
+      authDomain: "shuffle-song-suggestions.appspot.com",
       projectId: "shuffle-song-suggestions",
-      storageBucket: "shuffle-song-suggestions.appspot.com",  // ← 修正這個！
+      storageBucket: "shuffle-song-suggestions.firebasestorage.app",
       messagingSenderId: "92017531680",
       appId: "1:92017531680:web:358a69edcb70cb4b7c1545"
     };
@@ -96,7 +96,7 @@
 
       // 檢查是否重複
       const q = await db.collection("SongList")
-                        .where("name", "==", songName)
+                        .where("songname", "==", songName)
                         .where("artist", "==", artist)
                         .get();
 
@@ -113,15 +113,15 @@
 
       // 顯示推薦歌曲
       showStatus(
-        "🎉 你抽到的推薦歌曲是：<br><b>"
-        + randomSong.name + " - " + randomSong.artist
-        + "</b><br><br>你的推薦已加入歌單！",
+        "🎉 謝謝！你的推薦已加入歌單！<br><b>"
+        + "你抽到的推薦歌曲是：<br><b>"
+        + randomSong.songname + " - " + randomSong.artist,
         "success"
       );
 
       // 寫入新的歌曲
       await db.collection("SongList").add({
-        name: songName,
+        songname: songName,
         artist: artist
       });
 
