@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>交換歌名平台</title>
+
+  <!-- Firebase SDK (compat 版本，支援舊寫法) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 40px auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056d2;
+    }
+
+    #status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 16px;
+      display: none;
+    }
+
+    .error { background: #ffdddd; border: 1px solid #ff8888; }
+    .success { background: #ddffdd; border: 1px solid #88cc88; }
+  </style>
+</head>
+
+<body>
+
+  <h2>🎵 交換歌名平台</h2>
+
+  <label>歌名：</label>
+  <input id="songNameInput" type="text" placeholder="輸入歌名">
+
+  <label>歌手：</label>
+  <input id="artistInput" type="text" placeholder="輸入歌手">
+
+  <button onclick="submitSong()">提交</button>
+
+  <div id="status"></div>
+
+  <script>
+    /* ---------------------------
+       Firebase 設定
+    ---------------------------- */
+    const firebaseConfig = {
+      apiKey: "AIzaSyDl7MRgN9kYxJKPgb_3Q8C4HcznFsO-rdI",
+      authDomain: "shuffle-song-suggestions.firebaseapp.com",
+      projectId: "shuffle-song-suggestions",
+      storageBucket: "shuffle-song-suggestions.firebasestorage.app",
+      messagingSenderId: "92017531680",
+      appId: "1:92017531680:web:358a69edcb70cb4b7c1545"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    /* ---------------------------
+       主功能：提交歌名
+    ---------------------------- */
+    async function submitSong() {
+      const songName = document.getElementById("songNameInput").value.trim();
+      const artist = document.getElementById("artistInput").value.trim();
+      const statusBox = document.getElementById("status");
+
+      if (!songName || !artist) {
+        showStatus("請填寫完整的歌名與歌手！", "error");
+        return;
+      }
+
+      // 檢查是否重複
+      const q = await db.collection("SongList")
+                        .where("name", "==", songName)
+                        .where("artist", "==", artist)
+                        .get();
+
+      if (!q.empty) {
+        showStatus("❌ 這首歌已經在歌單中，請換一首！", "error");
+        return;
+      }
+
+      // 讀取整個歌單 → 抽歌
+      const allSongsSnapshot = await db.collection("SongList").get();
+      const songs = allSongsSnapshot.docs.map(d => d.data());
+
+      const randomSong = songs[Math.floor(Math.random() * songs.length)];
+
+      // 顯示推薦歌曲
+      showStatus(
+        "🎉 你抽到的推薦歌曲是：<br><b>"
+        + randomSong.name + " - " + randomSong.artist
+        + "</b><br><br>你的推薦已加入歌單！",
+        "success"
+      );
+
+      // 寫入新的歌曲
+      await db.collection("SongList").add({
+        name: songName,
+        artist: artist
+      });
+
+      // 清空輸入欄
+      document.getElementById("songNameInput").value = "";
+      document.getElementById("artistInput").value = "";
+    }
+
+    /* ---------------------------
+       顯示訊息
+    ---------------------------- */
+    function showStatus(msg, type) {
+      const box = document.getElementById("status");
+      box.style.display = "block";
+      box.className = type;
+      box.innerHTML = msg;
+    }
+  </script>
+
+</body>
+</html>
