@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>歌曲交換</title>
 
-  <!-- Firebase SDK (compat 版本，支援舊寫法) -->
+  <!-- Firebase SDK (compat 版本) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
@@ -53,126 +53,109 @@
 
 <body>
 
-  <h2>填一首你推薦的歌與歌庫交換🎵 </h2>
+<h2>填一首你推薦的歌與歌庫交換🎵 </h2>
 
-  <label>歌名：</label>
-  <input id="songNameInput" type="text" placeholder="輸入歌名">
+<label>歌名：</label>
+<input id="songNameInput" type="text" placeholder="輸入歌名">
 
-  <label>歌手：</label>
-  <input id="artistInput" type="text" placeholder="輸入歌手">
+<label>歌手：</label>
+<input id="artistInput" type="text" placeholder="輸入歌手">
 
-  <button onclick="submitSong()">提交</button>
+<button onclick="submitSong()">提交</button>
 
-  <div id="status"></div>
+<div id="status"></div>
 
-  <script>
-    /* ---------------------------
-       Firebase 設定
-    ---------------------------- */
-    const firebaseConfig = {
-      apiKey: "AIzaSyDl7MRgN9kYxJKPgb_3Q8C4HcznFsO-rdI",
-      authDomain: "shuffle-song-suggestions.firebaseapp.com",
-      projectId: "shuffle-song-suggestions",
-      storageBucket: "shuffle-song-suggestions.appspot.com",
-      messagingSenderId: "92017531680",
-      appId: "1:92017531680:web:358a69edcb70cb4b7c1545"
-    };
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDl7MRgN9kYxJKPgb_3Q8C4HcznFsO-rdI",
+    authDomain: "shuffle-song-suggestions.firebaseapp.com",
+    projectId: "shuffle-song-suggestions",
+    storageBucket: "shuffle-song-suggestions.appspot.com",
+    messagingSenderId: "92017531680",
+    appId: "1:92017531680:web:358a69edcb70cb4b7c1545"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-    /* ---------------------------
-       主功能：提交歌名 (Transaction 版本)
-    ---------------------------- */
-    async function submitSong() {
-      const songName = document.getElementById("songNameInput").value.trim();
-      const artist = document.getElementById("artistInput").value.trim();
-      const statusBox = document.getElementById("status");
+  async function submitSong() {
+    const songName = document.getElementById("songNameInput").value.trim();
+    const artist = document.getElementById("artistInput").value.trim();
 
-      if (!songName || !artist) {
-        showStatus("請填寫完整的歌名與歌手！", "error");
+    if (!songName || !artist) {
+      showStatus("請填寫完整的歌名與歌手！", "error");
+      return;
+    }
+
+    const songListRef = db.collection("SongList");
+
+    try {
+      // 1️⃣ 查重複
+      const duplicateSnapshot = await songListRef
+        .where("songname", "==", songName)
+        .where("artist", "==", artist)
+        .get();
+
+      if (!duplicateSnapshot.empty) {
+        showStatus("❌ 這首歌已經在歌單中，請換一首！", "error");
         return;
       }
 
-      try {
-        await db.runTransaction(async (transaction) => {
-          const songListRef = db.collection("SongList");
+      // 2️⃣ 計算最大 songId
+      const allSongsSnapshot = await songListRef.get();
+      let maxId = 0;
+      const songs = [];
+      allSongsSnapshot.forEach(doc => {
+        const data = doc.data();
+        songs.push(data); // 用於抽歌
+        if (data.songId && data.songId > maxId) maxId = data.songId;
+      });
+      const newIdNumber = maxId + 1;
+      const docId = String(newIdNumber).padStart(3, "0");
 
-          // 1. 檢查是否重複
-          const duplicateQuery = await transaction.get(
-            songListRef
-              .where("songname", "==", songName)
-              .where("artist", "==", artist)
-          );
+      // 3️⃣ 新增歌曲
+      await songListRef.doc(docId).set({
+        songId: newIdNumber,
+        songname: songName,
+        artist: artist
+      });
 
-          if (!duplicateQuery.empty) {
-            throw new Error("duplicate");
-          }
-
-          // 2. 讀取整個歌單 → 找最大 songId
-          const allSongsSnapshot = await transaction.get(songListRef);
-          let maxId = 0;
-          const songs = [];
-          allSongsSnapshot.forEach(doc => {
-            const data = doc.data();
-            songs.push(data);
-            if (data.songId && data.songId > maxId) maxId = data.songId;
-          });
-
-          const newId = maxId + 1;
-
-          // 3. 隨機抽歌
-          let randomSong = null;
-          if (songs.length > 0) {
-            randomSong = songs[Math.floor(Math.random() * songs.length)];
-          }
-
-          // 4. 新增文件，ID 用 newId
-          transaction.set(songListRef.doc(String(newId)), {
-            songId: newId,
-            songname: songName,
-            artist: artist
-          });
-
-          // 5. 顯示推薦歌曲
-          if (randomSong) {
-            showStatus(
-              `🎉 謝謝！你的推薦已加入歌單！<br>` +
-              `你抽到的推薦歌曲是：<b>${randomSong.songname} - ${randomSong.artist}</b>`,
-              "success"
-            );
-          } else {
-            showStatus(
-              `🎉 謝謝！你的推薦已加入歌單！<br>目前歌單還沒有其他歌曲可以抽！`,
-              "success"
-            );
-          }
-
-          // 清空輸入欄
-          document.getElementById("songNameInput").value = "";
-          document.getElementById("artistInput").value = "";
-
-        });
-      } catch (err) {
-        if (err.message === "duplicate") {
-          showStatus("❌ 這首歌已經在歌單中，請換一首！", "error");
-        } else {
-          console.error(err);
-          showStatus("❌ 發生錯誤，請稍後再試", "error");
-        }
+      // 4️⃣ 抽一首歌給使用者
+      let randomSong = null;
+      if (songs.length > 0) {
+        randomSong = songs[Math.floor(Math.random() * songs.length)];
       }
-    }
 
-    /* ---------------------------
-       顯示訊息
-    ---------------------------- */
-    function showStatus(msg, type) {
-      const box = document.getElementById("status");
-      box.style.display = "block";
-      box.className = type;
-      box.innerHTML = msg;
+      if (randomSong) {
+        showStatus(
+          `🎉 謝謝！你的推薦已加入歌單！<br>` +
+          `你抽到的推薦歌曲是：<b>${randomSong.songname} - ${randomSong.artist}</b>`,
+          "success"
+        );
+      } else {
+        showStatus(
+          `🎉 謝謝！你的推薦已加入歌單！<br>目前歌單還沒有其他歌曲可以抽！`,
+          "success"
+        );
+      }
+
+      // 清空輸入欄
+      document.getElementById("songNameInput").value = "";
+      document.getElementById("artistInput").value = "";
+
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ 發生錯誤：" + err.message, "error");
     }
-  </script>
+  }
+
+  function showStatus(msg, type) {
+    const box = document.getElementById("status");
+    box.style.display = "block";
+    box.className = type;
+    box.innerHTML = msg;
+  }
+</script>
 
 </body>
 </html>
